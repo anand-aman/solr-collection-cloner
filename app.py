@@ -3,6 +3,7 @@ import requests
 from flask import Flask, request
 
 from config import solr_host, solr_development_host
+from json_parser import make_payload, parse_file
 
 app = Flask(__name__)
 
@@ -94,6 +95,39 @@ def write_collection():
         return "Collection added successfully"
     except Exception as e:
         return e.__str__()
+
+
+@app.route('/post_solr')
+def post_solr():
+    document_list = parse_file()
+    print("Post Data Started")
+    solr_host = "http://188.166.3.10:8981/solr/product_profile1/update/json?commit=true"
+
+    # Pushing into Solr
+    count = 0
+    docs = []
+    for line in document_list:
+        count += 1
+        try:
+            json_object = eval(line)  # To convert str to dict
+            json_object = make_payload(json_object)
+
+            # response = requests.post(url=solr_host, json=payload)
+            # print(json_object)
+            docs.append(json_object)
+            if len(docs) == 500:
+                payload = json.dumps(docs)
+                response = requests.post(url=solr_host, data=payload)
+                print(count)
+                print(response)
+                docs.clear()
+        except Exception as e:
+            print(e.__str__())
+            continue
+    print(count)
+    payload = json.dumps(docs)
+    response = requests.post(url=solr_host, data=payload)
+    return "Posted!!"
 
 
 if __name__ == '__main__':
